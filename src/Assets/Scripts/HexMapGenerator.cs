@@ -11,6 +11,7 @@ public class HexMapGenerator : MonoBehaviour
 
     public int seed;
     public float tileSize;
+    public float refinement;
     public float minTileHeight;
     public float maxTileHeight = 1f;
     [Range(0, 1)]
@@ -51,14 +52,14 @@ public class HexMapGenerator : MonoBehaviour
         {
             for (int z = 0; z < mapHeight; z++)
             {
-                var tileCoord = CoordToPosition(x, z) + transform.position;
+                var tileCoord = CoordToPosition(z, x) + transform.position;
                 if (IsInsidePolygon(tileCoord, hexVertices.ToArray()))
                 {
                     //float randHeight = Mathf.Lerp(minTileHeight, maxTileHeight, (float)pseudoRNG.NextDouble());
-                    float randHeight = Mathf.PerlinNoise(tileCoord.x, tileCoord.z) * maxTileHeight;
+                    float randHeight = Mathf.PerlinNoise(x * refinement, z * refinement) * maxTileHeight;
                     GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
                     newTile.name = $"{x},{z}";
-                    newTile.transform.localPosition = CoordToPosition(x, z) + Vector3.up * newTile.transform.localScale.z + Vector3.up * (randHeight - 1)* newTile.transform.localScale.z;
+                    newTile.transform.localPosition = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z + Vector3.up * (randHeight - 1)* newTile.transform.localScale.z;
                     newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
                         (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
                         randHeight * newTile.transform.localScale.z);
