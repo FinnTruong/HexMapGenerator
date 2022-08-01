@@ -9,13 +9,19 @@ public class HexMapGenerator : MonoBehaviour
     [SerializeField] int mapWidth = 25;
     [SerializeField] int mapHeight = 12;
 
-    public float circleMaskRadius = 10f;
-    public float hexMaskRadius = 10f;
-    public List<Vector3> hexVertices = new List<Vector3>();
+    public int seed;
+    public float tileSize;
+    public float minTileHeight;
+    public float maxTileHeight = 1f;
+    [Range(0, 1)]
+    public float outlinePercent = 0f;
 
     public float tileXOffset = 1.5f;
     public float tileZOffset = 1.725f;
 
+    public float hexMaskRadius = 10f;
+    private List<Vector3> hexVertices = new List<Vector3>();
+    private List<GameObject> tileMap = new List<GameObject>();
     private Transform mapHolder;
     // Start is called before the first frame update
     void Start()
@@ -25,6 +31,8 @@ public class HexMapGenerator : MonoBehaviour
 
     private void Init()
     {
+        tileMap.Clear();
+        GetHexMask();
         string holderName = "Generated Tile";
         if (transform.Find(holderName))
             DestroyImmediate(transform.Find(holderName).gameObject);
@@ -38,7 +46,7 @@ public class HexMapGenerator : MonoBehaviour
     public void GenerateMap()
     {
         Init();
-
+        System.Random pseudoRNG = new System.Random(seed);
         for (int x = 0; x < mapWidth; x++)
         {
             for (int z = 0; z < mapHeight; z++)
@@ -46,9 +54,15 @@ public class HexMapGenerator : MonoBehaviour
                 var tileCoord = CoordToPosition(x, z) + transform.position;
                 if (IsInsidePolygon(tileCoord, hexVertices.ToArray()))
                 {
-                    GameObject temp = Instantiate(hexTilePrefab, mapHolder);
-                    temp.name = $"{x},{z}";
-                    temp.transform.localPosition = CoordToPosition(x, z);
+                    //float randHeight = Mathf.Lerp(minTileHeight, maxTileHeight, (float)pseudoRNG.NextDouble());
+                    float randHeight = Mathf.PerlinNoise(tileCoord.x, tileCoord.z) * maxTileHeight;
+                    GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
+                    newTile.name = $"{x},{z}";
+                    newTile.transform.localPosition = CoordToPosition(x, z) + Vector3.up * newTile.transform.localScale.z + Vector3.up * (randHeight - 1)* newTile.transform.localScale.z;
+                    newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
+                        (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
+                        randHeight * newTile.transform.localScale.z);
+                    tileMap.Add(newTile);
                 }
             }
         }
@@ -61,33 +75,13 @@ public class HexMapGenerator : MonoBehaviour
 
         if (z % 2 == 0)
         {
-            return new Vector3(x * tileXOffset + xOffset, 0, z * tileZOffset + zOffset);
+            return new Vector3(x * tileXOffset + xOffset, 0, z * tileZOffset + zOffset) * tileSize;
         }
         else
         {
-            return new Vector3(x * tileXOffset + tileXOffset / 2 + xOffset, 0, z * tileZOffset + zOffset);
+            return new Vector3(x * tileXOffset + tileXOffset / 2 + xOffset, 0, z * tileZOffset + zOffset) * tileSize;
         }
     }
-
-    public bool IsInCircle(Vector3 pos)        
-    {
-
-        return Vector3.Distance(transform.position, pos) < circleMaskRadius;
-    }
-
-    private bool IsInHex(Vector3 pos)
-    {
-        for (int i = 0; i <6; i++)
-        {
-            float angle_deg = 60 * i;
-            float angle_rad = Mathf.PI / 180f * angle_deg;
-            var point = new Vector3(Mathf.Cos(angle_rad), 0, Mathf.Sin(angle_rad)) + pos;
-            if (!IsInCircle(point))
-                return false;
-        }
-        return true;
-    }
-
     private void GetHexMask()
     {
         hexVertices.Clear();
@@ -95,9 +89,20 @@ public class HexMapGenerator : MonoBehaviour
         {
             float angle_deg = 60 * i;
             float angle_rad = Mathf.PI / 180f * angle_deg;
-            var point = new Vector3(hexMaskRadius * Mathf.Cos(angle_rad), 0, hexMaskRadius * Mathf.Sin(angle_rad)) + transform.position;
+            var point = new Vector3(hexMaskRadius  * Mathf.Cos(angle_rad), 0, hexMaskRadius  * Mathf.Sin(angle_rad)) + transform.position;
             hexVertices.Add(point);
         }
+    }
+
+    private bool IsInsidePolygon(Vector3 v, Vector3[] p)
+    {
+        int j = p.Length - 1;
+        bool c = false;
+        for (int i = 0; i < p.Length; j = i++)
+        {
+            c ^= p[i].z > v.z ^ p[j].z > v.z && v.x < (p[j].x - p[i].x) * (v.z - p[i].z) / (p[j].z - p[i].z) + p[i].x;
+        }
+        return c;
     }
 
     private void OnDrawGizmos()
@@ -111,15 +116,6 @@ public class HexMapGenerator : MonoBehaviour
         Gizmos.DrawLine(hexVertices[0], hexVertices[hexVertices.Count - 1]);
 
     }
-    public bool IsInsidePolygon(Vector3 v, Vector3[] p)
-    {
-        int j = p.Length - 1;
-        bool c = false;
-        for (int i = 0; i < p.Length; j = i++)
-        {
-            c ^= p[i].z > v.z ^ p[j].z > v.z && v.x < (p[j].x - p[i].x) * (v.z - p[i].z) / (p[j].z - p[i].z) + p[i].x;
-        }
-        return c;
-    }
+
 
 }
