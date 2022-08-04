@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,9 +10,10 @@ public class HexMapGenerator : MonoBehaviour
 
     public int seed;
     public float tileSize;
+    [Range(0,1)]
     public float refinement;
     public float minTileHeight;
-    public float maxTileHeight = 1f;
+    public float heightMultiplier = 1f;
     [Range(0, 1)]
     public float outlinePercent = 0f;
 
@@ -24,6 +24,29 @@ public class HexMapGenerator : MonoBehaviour
     private List<Vector3> hexVertices = new List<Vector3>();
     private List<GameObject> tileMap = new List<GameObject>();
     private Transform mapHolder;
+
+    [Header("Height Map Variables")]
+    public Material waterMat;
+    public Material sandMat;
+    public Material grassMat;
+    public Material forestMat;
+    public Material mountainMat;
+    public Material snowMat;
+
+    [Range(0,1)]
+    public float waterThreshold = 0.4f;
+    [Range(0,1)]
+    public float sandThreshold = 1f;
+    [Range(0,1)]
+    public float grassThreshold = 2f;
+    [Range(0,1)]
+    public float foresetThreshold = 3f;
+    [Range(0,1)]
+    public float mountainThreshold = 5f;
+
+    public float waterMeshSize = 0.85f;
+    public float waterDepth = 0;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -48,6 +71,7 @@ public class HexMapGenerator : MonoBehaviour
     {
         Init();
         System.Random pseudoRNG = new System.Random(seed);
+        GenerateWaterMesh();
         for (int x = 0; x < mapWidth; x++)
         {
             for (int z = 0; z < mapHeight; z++)
@@ -56,14 +80,18 @@ public class HexMapGenerator : MonoBehaviour
                 if (IsInsidePolygon(tileCoord, hexVertices.ToArray()))
                 {
                     //float randHeight = Mathf.Lerp(minTileHeight, maxTileHeight, (float)pseudoRNG.NextDouble());
-                    float randHeight = Mathf.PerlinNoise(x * refinement, z * refinement) * maxTileHeight;
-                    GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
-                    newTile.name = $"{x},{z}";
-                    newTile.transform.localPosition = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z + Vector3.up * (randHeight - 1)* newTile.transform.localScale.z;
-                    newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
-                        (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
-                        randHeight * newTile.transform.localScale.z);
-                    tileMap.Add(newTile);
+                    float randHeight = Mathf.PerlinNoise(x * refinement, z * refinement);
+                    if (randHeight >= waterThreshold)
+                    {
+                        GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
+                        newTile.GetComponent<Renderer>().material = GetTerrainFromHeight(randHeight);
+                        newTile.name = $"{x},{z}";
+                        newTile.transform.localPosition = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z + Vector3.up * ((randHeight*heightMultiplier) - 1) * newTile.transform.localScale.z;
+                        newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
+                            (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
+                            randHeight * heightMultiplier * newTile.transform.localScale.z);
+                        tileMap.Add(newTile);
+                    }
                 }
             }
         }
@@ -118,5 +146,120 @@ public class HexMapGenerator : MonoBehaviour
 
     }
 
+    private Material GetTerrainFromHeight(float height)
+    {
+        if (height <= waterThreshold)
+            return waterMat;
+        else if (height <= sandThreshold)
+            return sandMat;
+        else if (height <= grassThreshold)
+            return grassMat;
+        else if (height <= foresetThreshold)
+            return forestMat;
+        else if (height <= mountainThreshold)
+            return mountainMat;
+        else
+            return snowMat;
+    }
+    
+    private void GenerateWaterMesh()
+    {
+        DrawMesh();
+    }
 
+    private void DrawMesh()
+    {
+        List<Face> faces = new List<Face>();
+        //Bottom Face
+        for (int i = 0; i < 6; i++)
+        {
+            faces.Add(CreateFace(0, hexMaskRadius, -waterDepth, -waterDepth, i));
+        }
+        //Top Face
+        float waterHeight = waterThreshold * heightMultiplier * 0.15f;
+        for (int i = 0; i < 6; i++)
+        {
+            faces.Add(CreateFace(0, hexMaskRadius, waterHeight, waterHeight, i));
+        }
+
+        //Outer Face
+        for (int i = 0; i < 6; i++)
+        {
+            faces.Add(CreateFace(hexMaskRadius, hexMaskRadius, waterHeight, -waterDepth, i));
+        }
+        //Inner Face
+        for (int i = 0; i < 6; i++)
+        {
+            faces.Add(CreateFace(0, 0, waterHeight, -waterDepth, i));
+        }
+        CombineFaces(faces);
+    }
+
+    private void CombineFaces(List<Face>faces)
+    {
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> tris = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
+
+        for (int i = 0; i < faces.Count; i++)
+        {
+            //Add vertices
+            vertices.AddRange(faces[i].vertices);
+            uvs.AddRange(faces[i].uvs);
+            //Offset Triangles
+            int offset = (4 * i);
+            foreach (int triangles in faces[i].triangles)
+            {
+                tris.Add(triangles + offset);
+            }
+        }
+
+        GameObject waterMesh = new GameObject("Water Surface");
+        waterMesh.transform.parent = mapHolder.transform;
+        waterMesh.AddComponent<MeshRenderer>().material = waterMat;
+        MeshFilter meshFilter = waterMesh.AddComponent<MeshFilter>();
+
+        Mesh mesh = new Mesh();
+        mesh.vertices = vertices.ToArray();
+        mesh.uv = uvs.ToArray();
+        mesh.triangles = tris.ToArray();
+        mesh.RecalculateNormals();
+        meshFilter.mesh = mesh;
+    }
+
+    private Face CreateFace(float innerRadius, float outerRadius, float heightA, float heightB, int point)
+    {
+        Vector3 pointA = GetPoint(innerRadius, heightA, point);
+        Vector3 pointB = GetPoint(innerRadius, heightA, (point < 5) ? point + 1 : 0);
+        Vector3 pointC = GetPoint(outerRadius, heightB, (point < 5) ? point + 1 : 0);
+        Vector3 pointD = GetPoint(outerRadius, heightB, point);
+
+        List<Vector3> vertices = new List<Vector3>() { pointA, pointB, pointC, pointD };
+        List<int> triangles = new List<int>() { 0, 1, 2, 2, 3, 0 };
+        List<Vector2> uvs = new List<Vector2>() { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+
+        return new Face(vertices, triangles, uvs);
+    }
+
+    public Vector3 GetPoint(float size, float height, int index)
+    {
+        float angle_deg = 60 * index;
+        float angle_rad = Mathf.PI / 180f * angle_deg;
+        return new Vector3(size * Mathf.Cos(angle_rad) * waterMeshSize, height, size * Mathf.Sin(angle_rad) * waterMeshSize) + transform.position;
+    }   
+}
+
+
+public struct Face
+{
+    public List<Vector3> vertices { get; private set; }
+    public List<int> triangles { get; private set; }
+    public List<Vector2> uvs { get; private set; }
+
+    public Face(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs)
+    {
+        this.vertices = vertices;
+        this.triangles = triangles;
+        this.uvs = uvs;
+    }
 }
