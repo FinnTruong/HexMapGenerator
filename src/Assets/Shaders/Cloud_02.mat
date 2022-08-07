@@ -7,10 +7,10 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_Clouds
+  m_Name: Cloud_02
   m_Shader: {fileID: -6465566751694194690, guid: 80a6889e090c21047a6828a4abc79e9f, type: 3}
   m_ShaderKeywords: 
-  m_LightmapFlags: 4
+  m_LightmapFlags: 2
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
@@ -31,7 +31,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
+    - Curvature_Radius: 151
+    - Fade_Depth: 100
+    - Fresnel_Opacity: 1
+    - Fresnel_Power: 4.5
     - Vector1_1: 2
     - Vector1_1204a4481c3a493d81f53fd7744a8a1f: 0.01
     - Vector1_178ce9250d3240d2b9a5855495dd0ca1: 30
@@ -41,10 +46,10 @@ Material:
     - Vector1_7921792c407341858d89c4f3ded64bf5: 2
     - Vector1_829282070f2e43849c3a69cfcc435955: 20
     - Vector1_a50bb584e2bd4d7cb1fd310321bfa9e9: 30
-    - Vector1_dd5f595e1bdf42a6acb2f216884622f2: 1
+    - Vector1_dd5f595e1bdf42a6acb2f216884622f2: -0.08
     m_Colors:
-    - Color_5e078d50a8874e918b4beb01e6b87eab: {r: 0.2688679, g: 0.71649975, b: 1, a: 1}
-    - Color_7423212074c543ebabfa80e714bfb30f: {r: 1, g: 1, b: 1, a: 0}
+    - Color_5e078d50a8874e918b4beb01e6b87eab: {r: 0.6036846, g: 0.7829844, b: 0.8962264, a: 1}
+    - Color_7423212074c543ebabfa80e714bfb30f: {r: 0.53129226, g: 0.84202486, b: 0.9811321, a: 0}
     - Vector4_315b3e206e6a42ccb11885a7e43b2a42: {r: 0, g: 1, b: -0.3, a: 2.7}
     - Vector4_9ed62c17fea14e95b6761feea0e20f1a: {r: 1, g: 0, b: 0, a: 90}
   m_BuildTextureStacks: []

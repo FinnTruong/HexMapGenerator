@@ -64,6 +64,7 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
     - FOAM_SHADOWS: 1
     - INTERSECTION_EFFECTS: 1
@@ -118,7 +119,7 @@ Material:
     - _SurfaceFoamMovement: {r: 0.7, g: 0, b: 0.47, a: 0.01}
     - _SurfaceFoamSampling: {r: 1, g: 1, b: 1, a: 0}
     - _SurfaceFoamTilingAndOffset: {r: -1, g: -1, b: 0.57, a: 0.22}
-    - _WaterColorDeep: {r: 0.28346387, g: 0.67578274, b: 0.9245283, a: 1}
+    - _WaterColorDeep: {r: 0.21064433, g: 0.6401869, b: 0.9150943, a: 1}
     - _WaterColorHorizon: {r: 0, g: 0.4434522, b: 0.6509804, a: 1}
     - _WaterColorShallow: {r: 0, g: 1, b: 0.8071065, a: 0.5019608}
     - _WaterColorUnderwater: {r: 0.4481132, g: 0.75676817, b: 1, a: 1}
