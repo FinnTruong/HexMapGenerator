@@ -23,9 +23,10 @@ public class HexMapGenerator : MonoBehaviour
     public float hexMaskRadius = 10f;
     private List<Vector3> hexVertices = new List<Vector3>();
     private List<GameObject> tileMap = new List<GameObject>();
+    private List<GameObject> treeMap = new List<GameObject>();
     private Transform mapHolder;
 
-    [Header("Height Map Variables")]
+    [Header("Terrain Variables")]
     public Material waterMat;
     public Material sandMat;
     public Material grassMat;
@@ -44,8 +45,21 @@ public class HexMapGenerator : MonoBehaviour
     [Range(0,1)]
     public float mountainThreshold = 5f;
 
+    [Header("Water Surface")]
+
     public float waterMeshSize = 0.85f;
     public float waterDepth = 0;
+
+    [Header("Trees")]
+    public GameObject[] treesPrefab;
+    [Range(0, 1)]
+    public float treeMinThreshold;
+    [Range(0, 1)]
+    public float treeMaxThreshold = 1;
+    public Vector2 treeScale;
+    [Range(0,1)]
+    public float treeDensity;
+    public Material treeMat;
 
     // Start is called before the first frame update
     void Start()
@@ -56,6 +70,7 @@ public class HexMapGenerator : MonoBehaviour
     private void Init()
     {
         tileMap.Clear();
+        treeMap.Clear();
         GetHexMask();
         string holderName = "Generated Tile";
         if (transform.Find(holderName))
@@ -80,7 +95,8 @@ public class HexMapGenerator : MonoBehaviour
                 if (IsInsidePolygon(tileCoord, hexVertices.ToArray()))
                 {
                     //float randHeight = Mathf.Lerp(minTileHeight, maxTileHeight, (float)pseudoRNG.NextDouble());
-                    float randHeight = Mathf.PerlinNoise(x * refinement, z * refinement);
+                    float randHeight = Mathf.PerlinNoise((x + seed) * refinement, (z+seed) * refinement);
+                    //Generate Tile
                     if (randHeight >= waterThreshold)
                     {
                         GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
@@ -91,7 +107,23 @@ public class HexMapGenerator : MonoBehaviour
                             (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
                             randHeight * heightMultiplier * newTile.transform.localScale.z);
                         tileMap.Add(newTile);
+
+
+                        if (randHeight >= treeMinThreshold && randHeight <= treeMaxThreshold)
+                        {
+                            if (Random.Range(0f, 1f) < treeDensity)
+                            {
+                                var treeIndex = Random.Range(0, treesPrefab.Length - 1);
+                                GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
+                                tree.name = $"Tree: {x},{z}";
+                                tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
+                                tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y);
+                                tree.GetComponent<Renderer>().sharedMaterial = treeMat;
+                                treeMap.Add(tree);
+                            }
+                        }
                     }
+
                 }
             }
         }
@@ -161,7 +193,8 @@ public class HexMapGenerator : MonoBehaviour
         else
             return snowMat;
     }
-    
+
+    #region Hex Generation
     private void GenerateWaterMesh()
     {
         DrawMesh();
@@ -262,4 +295,5 @@ public struct Face
         this.triangles = triangles;
         this.uvs = uvs;
     }
+    #endregion
 }
