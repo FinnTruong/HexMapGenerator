@@ -61,6 +61,8 @@ public class HexMapGenerator : MonoBehaviour
     public float treeDensity;
     public Material treeMat;
 
+    public float rotateSpeed = 10f;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -79,6 +81,7 @@ public class HexMapGenerator : MonoBehaviour
         mapHolder = new GameObject(holderName).transform;
         mapHolder.parent = transform;
         mapHolder.transform.localPosition = Vector3.zero;
+        mapHolder.gameObject.AddComponent<Rotate>().rotateSpeed = rotateSpeed;
 
 
     }
@@ -117,6 +120,7 @@ public class HexMapGenerator : MonoBehaviour
                                 GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
                                 tree.name = $"Tree: {x},{z}";
                                 tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
+                                tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
                                 tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y);
                                 tree.GetComponent<Renderer>().sharedMaterial = treeMat;
                                 treeMap.Add(tree);
@@ -248,7 +252,7 @@ public class HexMapGenerator : MonoBehaviour
         }
 
         GameObject waterMesh = new GameObject("Water Surface");
-        waterMesh.transform.parent = mapHolder.transform;
+        waterMesh.transform.parent = transform;
         waterMesh.AddComponent<MeshRenderer>().material = waterMat;
         MeshFilter meshFilter = waterMesh.AddComponent<MeshFilter>();
 
