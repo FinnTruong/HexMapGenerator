@@ -112,20 +112,22 @@ public class HexMapGenerator : MonoBehaviour
                         tileMap.Add(newTile);
 
 
-                        if (randHeight >= treeMinThreshold && randHeight <= treeMaxThreshold)
+                        if (randHeight < treeDensity)
                         {
-                            if (Random.Range(0f, 1f) < treeDensity)
-                            {
-                                var treeIndex = Random.Range(0, treesPrefab.Length - 1);
-                                GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
-                                tree.name = $"Tree: {x},{z}";
-                                tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
-                                tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
-                                tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y);
-                                tree.GetComponent<Renderer>().sharedMaterial = treeMat;
-                                treeMap.Add(tree);
-                            }
+                            var treeIndex = Random.Range(0, treesPrefab.Length - 1);
+                            GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
+                            tree.name = $"Tree: {x},{z}";
+                            tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
+                            tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
+                            tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y) * Mathf.Abs(tileSize);
+                            tree.GetComponent<Renderer>().sharedMaterial = treeMat;
+                            treeMap.Add(tree);
                         }
+
+                        //if (randHeight >= treeMinThreshold && randHeight <= treeMaxThreshold)
+                        //{
+                           
+                        //}
                     }
 
                 }
@@ -252,7 +254,8 @@ public class HexMapGenerator : MonoBehaviour
         }
 
         GameObject waterMesh = new GameObject("Water Surface");
-        waterMesh.transform.parent = transform;
+        waterMesh.transform.parent = mapHolder;
+        waterMesh.transform.localPosition = Vector3.zero;
         waterMesh.AddComponent<MeshRenderer>().material = waterMat;
         MeshFilter meshFilter = waterMesh.AddComponent<MeshFilter>();
 
@@ -282,7 +285,7 @@ public class HexMapGenerator : MonoBehaviour
     {
         float angle_deg = 60 * index;
         float angle_rad = Mathf.PI / 180f * angle_deg;
-        return new Vector3(size * Mathf.Cos(angle_rad) * waterMeshSize, height, size * Mathf.Sin(angle_rad) * waterMeshSize) + transform.position;
+        return new Vector3(size * Mathf.Cos(angle_rad) * waterMeshSize, height, size * Mathf.Sin(angle_rad) * waterMeshSize);
     }   
 }
 
