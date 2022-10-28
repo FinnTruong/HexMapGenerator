@@ -20,6 +20,7 @@ public class HexMapGenerator : MonoBehaviour
     public float tileXOffset = 1.5f;
     public float tileZOffset = 1.725f;
 
+    [Range(0, 100)]
     public float hexMaskRadius = 10f;
     private List<Vector3> hexVertices = new List<Vector3>();
     private List<GameObject> tileMap = new List<GameObject>();
