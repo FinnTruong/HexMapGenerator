@@ -115,13 +115,12 @@ public class HexMapGenerator : MonoBehaviour
 
                         if (randHeight < treeDensity)
                         {
-                            var treeIndex = Random.Range(0, treesPrefab.Length - 1);
+                            var treeIndex = Random.Range(0, treesPrefab.Length);
                             GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
                             tree.name = $"Tree: {x},{z}";
                             tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
-                            tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
+                            //tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
                             tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y) * Mathf.Abs(tileSize);
-                            tree.GetComponent<Renderer>().sharedMaterial = treeMat;
                             treeMap.Add(tree);
                         }
 
