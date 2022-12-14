@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+using DG.Tweening;
 public class HexMapGenerator : MonoBehaviour
 {
     public GameObject hexTilePrefab;
@@ -106,11 +106,15 @@ public class HexMapGenerator : MonoBehaviour
                         GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
                         newTile.GetComponent<Renderer>().material = GetTerrainFromHeight(randHeight);
                         newTile.name = $"{x},{z}";
-                        newTile.transform.localPosition = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z + Vector3.up * ((randHeight*heightMultiplier) - 1) * newTile.transform.localScale.z;
+                        var tilePos = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z;
+                        var yOffset = Vector3.up * ((randHeight * heightMultiplier) - 1) * newTile.transform.localScale.z;
+                        newTile.transform.localPosition = tilePos - yOffset;
                         newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
                             (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
                             randHeight * heightMultiplier * newTile.transform.localScale.z);
+                        var tileIndex = tileMap.Count;
                         tileMap.Add(newTile);
+                        newTile.transform.DOLocalMove(tilePos + yOffset, 0.3f).SetDelay(tileIndex * 0.0025f);
 
 
                         if (randHeight < treeDensity)
@@ -118,9 +122,13 @@ public class HexMapGenerator : MonoBehaviour
                             var treeIndex = Random.Range(0, treesPrefab.Length);
                             GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
                             tree.name = $"Tree: {x},{z}";
+
                             tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
                             //tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
                             tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y) * Mathf.Abs(tileSize);
+                            tree.transform.parent = newTile.transform;
+
+
                             treeMap.Add(tree);
                         }
 
@@ -132,6 +140,15 @@ public class HexMapGenerator : MonoBehaviour
 
                 }
             }
+        }
+    }
+
+    public void MakeWave()
+    {
+        for (int i = 0; i < tileMap.Count; i++)
+        {
+            tileMap[i].transform.DOComplete();
+            tileMap[i].transform.DOLocalJump(tileMap[i].transform.localPosition,1f,1, 0.5f).SetDelay(i * 0.005f);
         }
     }
 
@@ -303,4 +320,5 @@ public struct Face
         this.uvs = uvs;
     }
     #endregion
+
 }
