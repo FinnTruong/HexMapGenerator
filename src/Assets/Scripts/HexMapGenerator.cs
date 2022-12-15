@@ -24,7 +24,10 @@ public class HexMapGenerator : MonoBehaviour
     public float hexMaskRadius = 10f;
     private List<Vector3> hexVertices = new List<Vector3>();
     private List<GameObject> tileMap = new List<GameObject>();
+    private List<Vector3> tileMapPos = new List<Vector3>();
+    private List<Vector3> tileMapScale = new List<Vector3>();
     private List<GameObject> treeMap = new List<GameObject>();
+    private List<Vector3> treeScaleMap = new List<Vector3>();
     private Transform mapHolder;
 
     [Header("Terrain Variables")]
@@ -48,6 +51,7 @@ public class HexMapGenerator : MonoBehaviour
 
     [Header("Water Surface")]
 
+    public GameObject waterMesh;
     public float waterMeshSize = 0.85f;
     public float waterDepth = 0;
 
@@ -64,6 +68,8 @@ public class HexMapGenerator : MonoBehaviour
 
     public float rotateSpeed = 10f;
 
+
+    private Sequence spawnSequence;
     // Start is called before the first frame update
     void Start()
     {
@@ -73,7 +79,10 @@ public class HexMapGenerator : MonoBehaviour
     private void Init()
     {
         tileMap.Clear();
+        tileMapPos.Clear();
+        tileMapScale.Clear();
         treeMap.Clear();
+        treeScaleMap.Clear();
         GetHexMask();
         string holderName = "Generated Tile";
         if (transform.Find(holderName))
@@ -108,13 +117,16 @@ public class HexMapGenerator : MonoBehaviour
                         newTile.name = $"{x},{z}";
                         var tilePos = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z;
                         var yOffset = Vector3.up * ((randHeight * heightMultiplier) - 1) * newTile.transform.localScale.z;
-                        newTile.transform.localPosition = tilePos - yOffset;
+                        newTile.transform.localPosition = tilePos + yOffset;
                         newTile.transform.localScale = new Vector3((1 - outlinePercent) * tileSize * newTile.transform.localScale.x,
                             (1 - outlinePercent) * tileSize * newTile.transform.localScale.y,
                             randHeight * heightMultiplier * newTile.transform.localScale.z);
-                        var tileIndex = tileMap.Count;
+
                         tileMap.Add(newTile);
-                        newTile.transform.DOLocalMove(tilePos + yOffset, 0.3f).SetDelay(tileIndex * 0.0025f);
+                        tileMapPos.Add(tilePos + yOffset);
+                        tileMapScale.Add(newTile.transform.localScale);
+                        var tileIndex = tileMap.Count;
+                        //newTile.transform.DOLocalMove(tilePos + yOffset, 0.3f).SetDelay(tileIndex * 0.0025f);
 
 
                         if (randHeight < treeDensity)
@@ -130,6 +142,7 @@ public class HexMapGenerator : MonoBehaviour
 
 
                             treeMap.Add(tree);
+                            treeScaleMap.Add(tree.transform.localScale);
                         }
 
                         //if (randHeight >= treeMinThreshold && randHeight <= treeMaxThreshold)
@@ -141,6 +154,42 @@ public class HexMapGenerator : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void PlaySpawnAnimation()
+    {
+        spawnSequence.Complete();
+        waterMesh.transform.localScale = Vector3.zero;
+        for (int i = 0; i < tileMap.Count; i++)
+        {
+            tileMap[i].transform.localScale = Vector3.zero;
+            //tileMap[i].transform.localPosition = tileMapPos[i] - (Vector3.up * 2f);
+        }
+        for (int i = 0; i < treeMap.Count; i++)
+        {
+            treeMap[i].transform.localScale = Vector3.zero;
+        }
+        spawnSequence = DOTween.Sequence();
+        spawnSequence.Append(waterMesh.transform.DOScale(Vector3.one, 0.4f).SetEase(Ease.OutBack));
+        spawnSequence.AppendCallback(() =>
+        {
+            for (int i = 0; i < tileMap.Count; i++)
+            {                
+                tileMap[i].transform.DOScale(tileMapScale[i], 0.3f).SetDelay(i * 0.0025f).OnStart(()=>
+                {
+                    tileMap[i].transform.localScale = new Vector3(tileMapScale[i].x, tileMapScale[i].y, 0);
+                });
+                //tileMap[i].transform.DOLocalMoveY(tileMapPos[i].y, 0.3f).SetDelay(i * 0.0025f);
+            }
+        });
+        spawnSequence.AppendCallback(() =>
+        {
+            for (int i = 0; i < treeMap.Count; i++)
+            {
+                treeMap[i].transform.DOScale(treeScaleMap[i], 0.5f).SetDelay(tileMap.Count * 0.0025f + 0.2f + 0 * 0.0025f).SetEase(Ease.OutBack);
+            }
+        });
+
     }
 
     public void MakeWave()
@@ -270,7 +319,7 @@ public class HexMapGenerator : MonoBehaviour
             }
         }
 
-        GameObject waterMesh = new GameObject("Water Surface");
+        waterMesh = new GameObject("Water Surface");
         waterMesh.transform.parent = mapHolder;
         waterMesh.transform.localPosition = Vector3.zero;
         waterMesh.AddComponent<MeshRenderer>().material = waterMat;
