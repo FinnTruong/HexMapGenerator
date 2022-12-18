@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
+using System;
+
 public class HexMapGenerator : MonoBehaviour
 {
     public GameObject hexTilePrefab;
@@ -38,6 +41,12 @@ public class HexMapGenerator : MonoBehaviour
     public Material mountainMat;
     public Material snowMat;
 
+    public Color sandColor;
+    public Color grassColor;
+    public Color forestColor;
+    public Color mountainColor;
+    public Color snowColor;
+
     [Range(0,1)]
     public float waterThreshold = 0.4f;
     [Range(0,1)]
@@ -45,7 +54,7 @@ public class HexMapGenerator : MonoBehaviour
     [Range(0,1)]
     public float grassThreshold = 2f;
     [Range(0,1)]
-    public float foresetThreshold = 3f;
+    public float forestThreshold = 3f;
     [Range(0,1)]
     public float mountainThreshold = 5f;
 
@@ -69,11 +78,76 @@ public class HexMapGenerator : MonoBehaviour
     public float rotateSpeed = 10f;
 
 
+    public GameObject cloud;
+
     private Sequence spawnSequence;
+    private Sequence waveSequence;
+
+    public Preset defautPreset;
+
+    //Island Slider
+    public Slider seedSlider, refinementSlider, tileSizeSlider, tileHeightSlider, mapRadiusSlider;
+    //Ocean Slider
+    public Slider waterThresholdSlider, waterDepthSlider, waterRadiusSlider;
+    //Tree Slider
+    public Slider treeDensitySlider, minTreeScaleSlider, maxTreeScaleSlider;
+    //Terrain Slider
+    public Slider sandSlider, grassSlider, forestSlider, mountainSlider;
+
     // Start is called before the first frame update
     void Start()
     {
+        SetDefaultValue();
+        //MapSliderValue();
+    }
+
+    public void SetDefaultValue()
+    {
+
+        seed = defautPreset.seed;
+        refinement = defautPreset.refinement;
+        tileSize = defautPreset.tileSize;
+        heightMultiplier = defautPreset.tileHeight;
+        hexMaskRadius = defautPreset.radius;
+
+        waterThreshold = defautPreset.waterThreshold;
+        sandThreshold = defautPreset.sandThreshold;
+        grassThreshold = defautPreset.grassThreshold;
+        forestThreshold = defautPreset.forestThreshold;
+        mountainThreshold = defautPreset.mountainThreshold;
+
+        waterMeshSize = defautPreset.waterMeshSize;
+        waterDepth = defautPreset.waterDepth;
+
+        treeDensity = defautPreset.treeDensity;
+        treeScale = defautPreset.treeScale;
+
+        //MapSliderValue();
         GenerateMap();
+        PlaySpawnAnimation();
+    }
+
+
+    private void MapSliderValue()
+    {
+        seedSlider.value = seed;
+        refinementSlider.value = refinement;
+        tileSizeSlider.value = tileSize;
+        tileHeightSlider.value = heightMultiplier;
+        mapRadiusSlider.value = hexMaskRadius;
+
+        waterThresholdSlider.value = waterThreshold;
+        waterDepthSlider.value = waterDepth;
+        waterRadiusSlider.value = waterMeshSize;
+
+        treeDensitySlider.value = treeDensity;
+        minTreeScaleSlider.value = treeScale.x;
+        maxTreeScaleSlider.value = treeScale.y;
+
+        sandSlider.value = sandThreshold;
+        grassSlider.value = grassThreshold;
+        forestSlider.value = forestThreshold;
+        mountainSlider.value = mountainThreshold;
     }
 
     private void Init()
@@ -113,7 +187,7 @@ public class HexMapGenerator : MonoBehaviour
                     if (randHeight >= waterThreshold)
                     {
                         GameObject newTile = Instantiate(hexTilePrefab, mapHolder);
-                        newTile.GetComponent<Renderer>().material = GetTerrainFromHeight(randHeight);
+                        newTile.GetComponent<Renderer>().material.color = GetColorFromHeight(randHeight);
                         newTile.name = $"{x},{z}";
                         var tilePos = CoordToPosition(z, x) + Vector3.up * newTile.transform.localScale.z;
                         var yOffset = Vector3.up * ((randHeight * heightMultiplier) - 1) * newTile.transform.localScale.z;
@@ -131,13 +205,13 @@ public class HexMapGenerator : MonoBehaviour
 
                         if (randHeight < treeDensity)
                         {
-                            var treeIndex = Random.Range(0, treesPrefab.Length);
+                            var treeIndex = UnityEngine.Random.Range(0, treesPrefab.Length);
                             GameObject tree = Instantiate(treesPrefab[treeIndex], mapHolder);
                             tree.name = $"Tree: {x},{z}";
 
                             tree.transform.localPosition = newTile.transform.localPosition + Vector3.up * newTile.transform.localScale.z;
                             //tree.transform.localRotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
-                            tree.transform.localScale = Vector3.one * Random.Range(treeScale.x, treeScale.y) * Mathf.Abs(tileSize);
+                            tree.transform.localScale = Vector3.one * Mathf.Lerp(treeScale.x, treeScale.y,(float)pseudoRNG.NextDouble()) * Mathf.Abs(tileSize);
                             tree.transform.parent = newTile.transform;
 
 
@@ -158,18 +232,24 @@ public class HexMapGenerator : MonoBehaviour
 
     public void PlaySpawnAnimation()
     {
-        spawnSequence.Complete();
-        waterMesh.transform.localScale = Vector3.zero;
-        for (int i = 0; i < tileMap.Count; i++)
-        {
-            tileMap[i].transform.localScale = Vector3.zero;
-            //tileMap[i].transform.localPosition = tileMapPos[i] - (Vector3.up * 2f);
-        }
-        for (int i = 0; i < treeMap.Count; i++)
-        {
-            treeMap[i].transform.localScale = Vector3.zero;
-        }
+        waveSequence.Kill(true);
+        spawnSequence.Kill(true);
         spawnSequence = DOTween.Sequence();
+        spawnSequence.AppendCallback(() =>
+        {
+            waterMesh.transform.localScale = Vector3.zero;
+            for (int i = 0; i < tileMap.Count; i++)
+            {
+                tileMap[i].transform.DOComplete();
+                tileMap[i].transform.localScale = Vector3.zero;
+                //tileMap[i].transform.localPosition = tileMapPos[i] - (Vector3.up * 2f);
+            }
+            for (int i = 0; i < treeMap.Count; i++)
+            {
+                treeMap[i].transform.DOComplete();
+                treeMap[i].transform.localScale = Vector3.zero;
+            }
+        });
         spawnSequence.Append(waterMesh.transform.DOScale(Vector3.one, 0.4f).SetEase(Ease.OutBack));
         spawnSequence.AppendCallback(() =>
         {
@@ -192,14 +272,28 @@ public class HexMapGenerator : MonoBehaviour
 
     }
 
-    public void MakeWave()
+    public void MakeWave(bool isRepeat = false)
     {
-        for (int i = 0; i < tileMap.Count; i++)
+        waveSequence.Kill(true);
+        waveSequence = DOTween.Sequence();
+        waveSequence.AppendCallback(() =>
         {
-            tileMap[i].transform.DOComplete();
-            tileMap[i].transform.DOLocalJump(tileMap[i].transform.localPosition,1f,1, 0.5f).SetDelay(i * 0.005f);
+            for (int i = 0; i < tileMap.Count; i++)
+            {
+                tileMap[i].transform.DOComplete();
+                //waveSequence.AppendInterval(i * 0.0025f);
+                //waveSequence.Append(tileMap[i].transform.DOLocalJump(tileMap[i].transform.localPosition, 1f, 1, 0.5f));
+                tileMap[i].transform.DOLocalJump(tileMap[i].transform.localPosition,1f,1, 0.5f).SetDelay(i * 0.005f);
+            }
+        });
+        waveSequence.AppendInterval(tileMap.Count * 0.005f + 0.5f);
+        if(isRepeat)
+        {
+            waveSequence.SetLoops(-1);
         }
     }
+
+
 
     public Vector3 CoordToPosition(int x, int z)
     {
@@ -258,13 +352,137 @@ public class HexMapGenerator : MonoBehaviour
             return sandMat;
         else if (height <= grassThreshold)
             return grassMat;
-        else if (height <= foresetThreshold)
+        else if (height <= forestThreshold)
             return forestMat;
         else if (height <= mountainThreshold)
             return mountainMat;
         else
             return snowMat;
     }
+
+    private Color GetColorFromHeight(float height)
+    {
+        if (height <= sandThreshold)
+            return sandColor;
+        else if (height <= grassThreshold)
+            return grassColor;
+        else if (height <= forestThreshold)
+            return forestColor;
+        else if (height <= mountainThreshold)
+            return mountainColor;
+        else
+            return snowColor;
+    }
+    #region UI Controller Mapping
+
+    //Map Settings
+    public void SetSeed(Slider slider)
+    {
+        seed = (int)slider.value;
+        GenerateMap();
+    }
+
+    public void SetRefinement(Slider slider)
+    {
+        refinement = slider.value;
+        GenerateMap();
+    }
+
+    public void SetTileSize(Slider slider)
+    {
+        tileSize = slider.value;
+        GenerateMap();
+    }
+
+    public void SetTileHeight(Slider slider)
+    {
+        heightMultiplier = slider.value;
+        GenerateMap();
+    }
+
+    public void SetRadius(Slider slider)
+    {
+        hexMaskRadius = slider.value;
+        GenerateMap();
+    }
+
+
+    //Water Settings
+    public void SetWaterSize(Slider slider)
+    {
+        waterMeshSize = slider.value;
+        GenerateMap();
+    }
+
+    public void SetWaterDepth(Slider slider)
+    {
+        waterDepth = slider.value;
+        GenerateMap();
+    }
+    public void SetWaterHeight(Slider slider)
+    {
+        waterThreshold = slider.value;
+        GenerateMap();
+    }
+
+    //Foliage Settings
+    public void SetTreeDensity(Slider slider)
+    {
+        treeDensity = slider.value;
+        GenerateMap();
+    }
+
+    public void SetTreeMinScale(Slider slider)
+    {
+        treeScale.x = slider.value;
+        GenerateMap();
+    }    
+
+    public void SetTreeMaxScale(Slider slider)
+    {
+        treeScale.y = slider.value;
+        GenerateMap();
+    }
+
+    //Terrain Settings
+    public void SetSandThreshold(Slider slider)
+    {
+        sandThreshold = slider.value;
+        GenerateMap();
+    }
+
+    public void SetGrassThreshold(Slider slider)
+    {
+        grassThreshold = slider.value;
+        GenerateMap();
+    }
+
+    public void SetForestThreshold(Slider slider)
+    {
+        forestThreshold = slider.value;
+        GenerateMap();
+    }
+
+    public void SetMountainThreshold(Slider slider)
+    {
+        mountainThreshold = slider.value;
+        GenerateMap();
+    }
+
+    public void SetPeakThreshold(Slider slider)
+    {
+        //snowTjh
+    }
+    #endregion
+
+    //Palette Settings
+
+    //Effect Settings
+    public void EnableCloud()
+    {
+        cloud.SetActive(!cloud.activeInHierarchy);
+    }
+
 
     #region Hex Generation
     private void GenerateWaterMesh()
@@ -352,22 +570,44 @@ public class HexMapGenerator : MonoBehaviour
         float angle_deg = 60 * index;
         float angle_rad = Mathf.PI / 180f * angle_deg;
         return new Vector3(size * Mathf.Cos(angle_rad) * waterMeshSize, height, size * Mathf.Sin(angle_rad) * waterMeshSize);
-    }   
-}
-
-
-public struct Face
-{
-    public List<Vector3> vertices { get; private set; }
-    public List<int> triangles { get; private set; }
-    public List<Vector2> uvs { get; private set; }
-
-    public Face(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs)
-    {
-        this.vertices = vertices;
-        this.triangles = triangles;
-        this.uvs = uvs;
     }
+
+
+
+    public struct Face
+    {
+        public List<Vector3> vertices { get; private set; }
+        public List<int> triangles { get; private set; }
+        public List<Vector2> uvs { get; private set; }
+
+        public Face(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs)
+        {
+            this.vertices = vertices;
+            this.triangles = triangles;
+            this.uvs = uvs;
+        }
+
+    }
+
     #endregion
 
+}
+
+[Serializable]
+public struct Preset
+{
+    public int seed;
+    public float refinement;
+    public float tileSize;
+    public float tileHeight;
+    public float radius;
+
+    [Range(0, 1)]
+    public float waterThreshold, sandThreshold, grassThreshold, forestThreshold, mountainThreshold;
+
+    public float waterMeshSize;
+    public float waterDepth;
+
+    public float treeDensity;
+    public Vector2 treeScale;
 }
